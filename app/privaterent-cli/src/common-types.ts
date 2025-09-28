@@ -1,7 +1,4 @@
-import {
-  PrivateRent,
-  type PrivateRentPrivateState,
-} from "@midnight-ntwrk/privaterent-contract";
+import { type PrivateRentPrivateState } from "@midnight-ntwrk/privaterent-contract";
 import type {
   ImpureCircuitId,
   MidnightProviders,
@@ -11,9 +8,7 @@ import type {
   FoundContract,
 } from "@midnight-ntwrk/midnight-js-contracts";
 
-export type PrivateRentCircuits = ImpureCircuitId<
-  PrivateRent.Contract<PrivateRentPrivateState>
->;
+export type PrivateRentCircuits = ImpureCircuitId<any>;
 
 export const PrivateRentPrivateStateId = "privateRentPrivateState";
 
@@ -23,7 +18,7 @@ export type PrivateRentProviders = MidnightProviders<
   PrivateRentPrivateState
 >;
 
-export type PrivateRentContract = PrivateRent.Contract<PrivateRentPrivateState>;
+export type PrivateRentContract = any;
 
 export type DeployedPrivateRentContract =
   | DeployedContract<PrivateRentContract>

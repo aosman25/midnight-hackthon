@@ -34,8 +34,8 @@ import {
   type PrivateRentProviders,
   type DeployedPrivateRentContract,
   type PrivateRentPrivateState,
-} from "./common-types";
-import { type Config, contractConfig } from "./config";
+} from "./common-types.js";
+import { type Config, contractConfig } from "./config.js";
 import { levelPrivateStateProvider } from "@midnight-ntwrk/midnight-js-level-private-state-provider";
 import {
   assertIsContractAddress,
@@ -116,40 +116,47 @@ export const createListing = async (
   minCredit: bigint,
 ): Promise<FinalizedTxData> => {
   logger.info("Creating rental listing...");
-  const finalizedTxData = await privateRentContract.callTx.createListing(
-    rent,
-    minIncome,
-    minCredit,
-  );
+  const finalizedTxData = await (
+    privateRentContract.callTx.createListing as any
+  )(rent, minIncome, minCredit);
   logger.info(
     `Transaction ${finalizedTxData.public.txId} added in block ${finalizedTxData.public.blockHeight}`,
   );
   return finalizedTxData.public;
 };
-
 export const applyToListing = async (
-  privateRentContract: DeployedPrivateRentContract,
+  providers: PrivateRentProviders,
+  contractAddress: string,
   listingId: bigint,
+  tenantData: PrivateRentPrivateState,
 ): Promise<FinalizedTxData> => {
   logger.info("Applying to rental listing...");
-  const finalizedTxData =
-    await privateRentContract.callTx.applyToListing(listingId);
+  logger.info(`Tenant data - Income: ${tenantData.income}, Credit: ${tenantData.creditScore}`);
+  
+  // Create a new contract instance with the tenant's private state
+  const tenantContract = await findDeployedContract(providers, {
+    contractAddress,
+    contract: privateRentContractInstance,
+    privateStateId: "privateRentPrivateState",
+    initialPrivateState: tenantData,  // Use the tenant's data as private state
+  });
+  
+  const finalizedTxData = await (tenantContract.callTx.applyToListing as any)(listingId);
+  
   logger.info(
     `Transaction ${finalizedTxData.public.txId} added in block ${finalizedTxData.public.blockHeight}`,
   );
   return finalizedTxData.public;
 };
-
 export const acceptApplicant = async (
   privateRentContract: DeployedPrivateRentContract,
   listingId: bigint,
   tenantPk: Uint8Array,
 ): Promise<FinalizedTxData> => {
   logger.info("Accepting applicant...");
-  const finalizedTxData = await privateRentContract.callTx.acceptApplicant(
-    listingId,
-    tenantPk,
-  );
+  const finalizedTxData = await (
+    privateRentContract.callTx.acceptApplicant as any
+  )(listingId, tenantPk);
   logger.info(
     `Transaction ${finalizedTxData.public.txId} added in block ${finalizedTxData.public.blockHeight}`,
   );

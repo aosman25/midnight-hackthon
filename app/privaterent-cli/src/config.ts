@@ -77,7 +77,6 @@ export const contractConfig = {
     "..",
     "contract",
     "src",
-    "managed",
-    "privaterent",
+    "build",
   ),
 };

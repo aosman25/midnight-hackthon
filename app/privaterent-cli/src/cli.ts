@@ -12,13 +12,13 @@ import {
   joinContract,
   saveState,
   setLogger,
-} from "./api";
-import { type Config } from "./config";
+} from "./api.js";
+import { type Config } from "./config.js";
 import {
   type DeployedPrivateRentContract,
   type PrivateRentProviders,
   type PrivateRentPrivateState,
-} from "./common-types";
+} from "./common-types.js";
 import { createTenantPrivateState } from "@midnight-ntwrk/privaterent-contract";
 
 const question = (rli: ReadLine, prompt: string): Promise<string> =>
@@ -196,16 +196,17 @@ Enter 1, 2, 3, 4, or 5: `,
             "Enter listing ID to apply to: ",
           );
           const listingId = BigInt(parseInt(listingIdStr, 10));
-
+      
           console.log(
             "📝 Please provide your tenant information for ZK proof generation:",
           );
-          await promptTenantData(rli);
-
-          // Update the contract's private state with tenant data
-          // Note: In a real implementation, you'd need to properly manage private state
-
-          await applyToListing(privateRentContract, listingId);
+          const tenantData = await promptTenantData(rli);
+      
+          // Get the contract address from the deployed contract
+          const contractAddress = privateRentContract.deployTxData.public.contractAddress;
+          
+          // Call the updated applyToListing function with providers and contract address
+          await applyToListing(providers, contractAddress, listingId, tenantData);
           console.log(
             "✅ Application submitted successfully! Your qualifications were verified privately.",
           );
