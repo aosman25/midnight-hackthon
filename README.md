@@ -63,7 +63,6 @@ The system consists of three main components:
 3. **Build the contract**
    ```bash
    cd contract
-   npm run compact
    npm run build
    ```
 
