@@ -74,6 +74,12 @@ The system consists of three main components:
 
 ### Running the Application
 
+#### Setup Proof Server (Required)
+Before running the application, you need to start the proof server:
+```bash
+./setup/run-proof-server.sh
+```
+
 #### Option 1: Local Testnet (Recommended for Development)
 ```bash
 cd app/privaterent-cli
@@ -190,6 +196,11 @@ Configuration files are located in `app/privaterent-cli/`:
 ## 🏆 Hackathon Project
 
 This project was created for the Midnight Hackathon, demonstrating practical applications of zero-knowledge proofs in real estate and privacy-preserving applications.
+
+### 🎥 Demo Video
+
+Watch the full demonstration of PrivateRent in action:
+[**Video Demo**](https://drive.google.com/file/d/1SgMUfGL9j0etcE94jR5JwlQrNh9xiB6b/view?usp=sharing)
 
 ---
 
