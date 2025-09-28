@@ -1,0 +1,169 @@
+pragma language_version 0.17;
+import CompactStandardLibrary;
+
+// Application status enumeration
+enum ApplicationStatus {
+    PENDING,
+    QUALIFIED, 
+    REJECTED,
+    ACCEPTED
+}
+
+// Rental listing structure
+struct Listing {
+    landlord: Bytes<32>,        // Public key of landlord
+    rent: Uint<64>,
+    minIncome: Uint<64>,
+    minCredit: Uint<64>,
+    isActive: Boolean
+}
+
+// Applicant data structure
+struct Applicant {
+    tenant: Bytes<32>,          // Public key of tenant
+    status: ApplicationStatus,
+    applicationTime: Uint<64>
+}
+
+// Ledger state declarations
+export ledger listings: Map<Uint<64>, Listing>;
+export ledger applicants: Map<Uint<64>, Map<Bytes<32>, Applicant>>;
+export ledger nextListingId: Counter;
+
+// Witness functions for private tenant data
+witness getTenantIncome(): Uint<64>;
+witness getTenantCredit(): Uint<64>; 
+witness getTenantContactInfo(): Opaque<"string">;
+witness getSecretKey(): Bytes<32>;
+
+// Helper circuit to generate public key from secret key
+circuit publicKey(sk: Bytes<32>): Bytes<32> {
+    return persistentHash<Vector<2, Bytes<32>>>(
+        [pad(32, "rental:pk"), sk]
+    );
+}
+
+// Create a new rental listing
+export circuit createListing(rent: Uint<64>, minIncome: Uint<64>, minCredit: Uint<64>): Uint<64> {
+    const sk = getSecretKey();
+    const landlordPk = disclose(publicKey(sk));
+    const listingId = nextListingId.read();
+    
+    // Create the listing
+    const listing = Listing {
+        landlord: landlordPk,
+        rent: disclose(rent),
+        minIncome: disclose(minIncome),
+        minCredit: disclose(minCredit),
+        isActive: true
+    };
+    
+    listings.insert(disclose(listingId), listing);
+    applicants.insertDefault(disclose(listingId));
+    nextListingId.increment(1);
+    
+    return disclose(listingId);
+}
+
+// Apply to a rental listing with private data
+export circuit applyToListing(listingId: Uint<64>): [] {
+    // Verify listing exists and is active
+    assert(listings.member(disclose(listingId)), "Listing does not exist");
+    const listing = listings.lookup(disclose(listingId));
+    assert(listing.isActive, "Listing is not active");
+    
+    const sk = getSecretKey();
+    const tenantPk = disclose(publicKey(sk));
+    
+    // Get private tenant data through witnesses
+    const income = getTenantIncome();
+    const credit = getTenantCredit();
+    
+    // Verify tenant meets requirements using ZK proofs
+    // The actual values remain private, only the boolean result is disclosed
+    const meetsIncomeReq = income >= listing.minIncome;
+    const meetsCreditReq = credit >= listing.minCredit;
+    
+    assert(meetsIncomeReq, "Income requirement not met");
+    assert(meetsCreditReq, "Credit requirement not met");
+    
+    // Create applicant record
+    const applicant = Applicant {
+        tenant: tenantPk,
+        status: ApplicationStatus.QUALIFIED,
+        applicationTime: 0  // In real implementation, use block time
+    };
+    
+    // Add to applicants map for this listing
+    applicants.lookup(disclose(listingId)).insert(disclose(tenantPk), applicant);
+}
+
+// Landlord reviews and accepts an applicant
+export circuit acceptApplicant(listingId: Uint<64>, tenantPk: Bytes<32>): Opaque<"string"> {
+    const sk = getSecretKey();
+    const landlordPk = disclose(publicKey(sk));
+    
+    // Verify caller is the landlord
+    const listing = listings.lookup(disclose(listingId));
+    assert(listing.landlord == landlordPk, "Only landlord can accept applicants");
+    
+    // Verify applicant exists and is qualified
+    assert(applicants.lookup(disclose(listingId)).member(disclose(tenantPk)), "Applicant not found");
+    
+    const applicant = applicants.lookup(disclose(listingId)).lookup(disclose(tenantPk));
+    assert(applicant.status == ApplicationStatus.QUALIFIED, "Applicant not qualified");
+    
+    // Update applicant status to accepted
+    const updatedApplicant = Applicant {
+        tenant: applicant.tenant,
+        status: ApplicationStatus.ACCEPTED,
+        applicationTime: applicant.applicationTime
+    };
+    applicants.lookup(disclose(listingId)).insert(disclose(tenantPk), updatedApplicant);
+    
+    // Return contact info (this would need to be handled via witness)
+    // In practice, this would trigger a separate process for secure communication
+    return disclose(getTenantContactInfo());
+}
+
+// Tenant can prove their qualification without revealing actual values
+export circuit proveQualification(listingId: Uint<64>): Boolean {
+    const listing = listings.lookup(disclose(listingId));
+    
+    const income = getTenantIncome();
+    const credit = getTenantCredit();
+    
+    // Return boolean proof of qualification without revealing actual values
+    // We disclose the boolean result but not the underlying income/credit values
+    return disclose((income >= listing.minIncome) && (credit >= listing.minCredit));
+}
+
+// Get listing details (public information)
+export circuit getListingDetails(listingId: Uint<64>): Listing {
+    assert(listings.member(disclose(listingId)), "Listing does not exist");
+    return listings.lookup(disclose(listingId));
+}
+
+// Check if tenant has applied to a listing
+export circuit hasApplied(listingId: Uint<64>): Boolean {
+    const sk = getSecretKey();
+    const tenantPk = disclose(publicKey(sk));
+    
+    if (!applicants.member(disclose(listingId))) {
+        return false;
+    }
+    
+    return applicants.lookup(disclose(listingId)).member(tenantPk);
+}
+
+// Get application status for a tenant
+export circuit getApplicationStatus(listingId: Uint<64>): ApplicationStatus {
+    const sk = getSecretKey();
+    const tenantPk = disclose(publicKey(sk));
+    
+    assert(applicants.member(disclose(listingId)), "No applications for this listing");
+    assert(applicants.lookup(disclose(listingId)).member(tenantPk), "You have not applied to this listing");
+    
+    const applicant = applicants.lookup(disclose(listingId)).lookup(tenantPk);
+    return applicant.status;
+}
