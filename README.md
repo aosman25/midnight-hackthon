@@ -186,11 +186,6 @@ Configuration files are located in `app/privaterent-cli/`:
 - **Network Security**: Use appropriate network configurations for production
 - **Data Persistence**: Private state is stored locally and encrypted
 
-## 🔗 Resources
-
-- [Midnight Network Documentation](https://docs.midnight.network/)
-- [Compact Language Guide](https://docs.midnight.network/develop/compact/)
-- [Zero-Knowledge Proofs Overview](https://docs.midnight.network/learn/zkps/)
 
 ## 🏆 Hackathon Project
 
