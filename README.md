@@ -51,7 +51,7 @@ The system consists of three main components:
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd midnight-hackthon
+   cd privaterent-midnight-hackthon
    ```
 
 2. **Install dependencies**
