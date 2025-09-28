@@ -24,7 +24,6 @@ import {
 import { type Resource, WalletBuilder } from "@midnight-ntwrk/wallet";
 import { type Wallet } from "@midnight-ntwrk/wallet-api";
 import { Transaction as ZswapTransaction } from "@midnight-ntwrk/zswap";
-import { webcrypto } from "crypto";
 import { type Logger } from "pino";
 import * as Rx from "rxjs";
 import { WebSocket } from "ws";
@@ -45,6 +44,8 @@ import {
   getLedgerNetworkId,
   getZswapNetworkId,
 } from "@midnight-ntwrk/midnight-js-network-id";
+import { webcrypto } from "crypto";
+import { createHash } from "crypto";
 import * as fsAsync from "node:fs/promises";
 import * as fs from "node:fs";
 
@@ -109,6 +110,38 @@ export const deploy = async (
   return privateRentContract;
 };
 
+// Updated to support identity-based operations
+export const createListingWithIdentity = async (
+  providers: PrivateRentProviders,
+  contractAddress: string,
+  landlordPrivateState: PrivateRentPrivateState,
+  rent: bigint,
+  minIncome: bigint,
+  minCredit: bigint,
+): Promise<FinalizedTxData> => {
+  logger.info("Creating rental listing...");
+
+  // Create contract instance with landlord's private state
+  const landlordContract = await findDeployedContract(providers, {
+    contractAddress,
+    contract: privateRentContractInstance,
+    privateStateId: "privateRentPrivateState",
+    initialPrivateState: landlordPrivateState,
+  });
+
+  const finalizedTxData = await (landlordContract.callTx.createListing as any)(
+    rent,
+    minIncome,
+    minCredit,
+  );
+
+  logger.info(
+    `Transaction ${finalizedTxData.public.txId} added in block ${finalizedTxData.public.blockHeight}`,
+  );
+  return finalizedTxData.public;
+};
+
+// Keep the old function for backward compatibility
 export const createListing = async (
   privateRentContract: DeployedPrivateRentContract,
   rent: bigint,
@@ -124,30 +157,80 @@ export const createListing = async (
   );
   return finalizedTxData.public;
 };
+
 export const applyToListing = async (
   providers: PrivateRentProviders,
   contractAddress: string,
   listingId: bigint,
   tenantData: PrivateRentPrivateState,
-): Promise<FinalizedTxData> => {
+): Promise<{ txData: FinalizedTxData; publicKey: string }> => {
   logger.info("Applying to rental listing...");
-  logger.info(`Tenant data - Income: ${tenantData.income}, Credit: ${tenantData.creditScore}`);
-  
+  logger.info(
+    `Tenant data - Income: ${tenantData.income}, Credit: ${tenantData.creditScore}`,
+  );
+
+  // Fixed public key calculation with proper ES module imports
+  const calculatePublicKey = (secretKey: Uint8Array): string => {
+    const prefix = Buffer.from("rental:pk".padEnd(32, "\0"));
+    const combined = Buffer.concat([prefix, Buffer.from(secretKey)]);
+    return createHash("sha256").update(combined).digest("hex");
+  };
+
+  const publicKey = calculatePublicKey(tenantData.secretKey);
+  logger.info(`Generated public key: ${publicKey}`);
+
   // Create a new contract instance with the tenant's private state
   const tenantContract = await findDeployedContract(providers, {
     contractAddress,
     contract: privateRentContractInstance,
     privateStateId: "privateRentPrivateState",
-    initialPrivateState: tenantData,  // Use the tenant's data as private state
+    initialPrivateState: tenantData,
   });
-  
-  const finalizedTxData = await (tenantContract.callTx.applyToListing as any)(listingId);
-  
+
+  const finalizedTxData = await (tenantContract.callTx.applyToListing as any)(
+    listingId,
+  );
+
+  logger.info(
+    `Transaction ${finalizedTxData.public.txId} added in block ${finalizedTxData.public.blockHeight}`,
+  );
+
+  return {
+    txData: finalizedTxData.public,
+    publicKey,
+  };
+};
+
+// Updated to support identity-based operations
+export const acceptApplicantWithIdentity = async (
+  providers: PrivateRentProviders,
+  contractAddress: string,
+  landlordPrivateState: PrivateRentPrivateState,
+  listingId: bigint,
+  tenantPk: Uint8Array,
+): Promise<FinalizedTxData> => {
+  logger.info("Accepting applicant...");
+  logger.info(`Using landlord identity for listing ${listingId}`);
+
+  // Create contract instance with landlord's private state
+  const landlordContract = await findDeployedContract(providers, {
+    contractAddress,
+    contract: privateRentContractInstance,
+    privateStateId: "privateRentPrivateState",
+    initialPrivateState: landlordPrivateState,
+  });
+
+  const finalizedTxData = await (
+    landlordContract.callTx.acceptApplicant as any
+  )(listingId, tenantPk);
+
   logger.info(
     `Transaction ${finalizedTxData.public.txId} added in block ${finalizedTxData.public.blockHeight}`,
   );
   return finalizedTxData.public;
 };
+
+// Keep the old function for backward compatibility
 export const acceptApplicant = async (
   privateRentContract: DeployedPrivateRentContract,
   listingId: bigint,
