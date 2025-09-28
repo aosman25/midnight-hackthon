@@ -5,9 +5,16 @@ set -euo pipefail
 mkdir -p ~/midnight-tools/compactc
 cd ~/midnight-tools/compactc
 
-# Download and install Compact compiler
-curl --proto '=https' --tlsv1.2 -LsSf \
-  https://github.com/midnightntwrk/compact/releases/download/compact-v0.2.0/compact-installer.sh | sh
+# Download Compact compiler v0.24.0 for Linux (x86_64, musl build)
+curl -L -o compactc_v0.24.0_x86_64-unknown-linux-musl.zip \
+  https://github.com/midnightntwrk/compact/releases/download/compactc-v0.24.0/compactc_v0.24.0_x86_64-unknown-linux-musl.zip
+
+# Unzip
+unzip -o compactc_v0.24.0_x86_64-unknown-linux-musl.zip
+
+# Copy all components into ~/.local/bin
+mkdir -p ~/.local/bin
+cp compactc compactc.bin zkir ~/.local/bin/
 
 # Ensure ~/.local/bin is in PATH
 if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
@@ -15,17 +22,14 @@ if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
   export PATH="$HOME/.local/bin:$PATH"
 fi
 
-# Optional: symlink compact -> compactc for compatibility
-if [ ! -f "$HOME/.local/bin/compactc" ]; then
-  ln -s "$HOME/.local/bin/compact" "$HOME/.local/bin/compactc"
+# Optional: symlink 'compact' -> 'compactc' for compatibility
+if [ ! -f "$HOME/.local/bin/compact" ]; then
+  ln -s "$HOME/.local/bin/compactc" "$HOME/.local/bin/compact"
 fi
 
 # Verify install
-echo "Compact compiler version:"
-compact --version
+echo "Compactc version:"
+~/.local/bin/compactc --version
 
-echo "Compactc symlink version:"
-compactc --version
-
-echo "GLIBC version:"
-ldd --version
+echo "zkir version:"
+~/.local/bin/zkir --version
