@@ -11,23 +11,27 @@ export type PrivateRentPrivateState = {
 // Witness functions that provide private data to circuits
 export const witnesses = {
   // Witness function to get tenant's income (kept private)
-  getTenantIncome: (privateState: PrivateRentPrivateState): bigint => {
-    return privateState.income;
+  getTenantIncome: (context: any): [PrivateRentPrivateState, bigint] => {
+    const privateState = context.privateState;
+    return [privateState, privateState.income];
   },
 
   // Witness function to get tenant's credit score (kept private)
-  getTenantCredit: (privateState: PrivateRentPrivateState): bigint => {
-    return privateState.creditScore;
+  getTenantCredit: (context: any): [PrivateRentPrivateState, bigint] => {
+    const privateState = context.privateState;
+    return [privateState, privateState.creditScore];
   },
 
   // Witness function to get tenant's contact information (revealed only after acceptance)
-  getTenantContactInfo: (privateState: PrivateRentPrivateState): string => {
-    return privateState.contactInfo;
+  getTenantContactInfo: (context: any): [PrivateRentPrivateState, string] => {
+    const privateState = context.privateState;
+    return [privateState, privateState.contactInfo];
   },
 
   // Witness function to get the secret key for public key generation
-  getSecretKey: (privateState: PrivateRentPrivateState): Uint8Array => {
-    return privateState.secretKey;
+  getSecretKey: (context: any): [PrivateRentPrivateState, Uint8Array] => {
+    const privateState = context.privateState;
+    return [privateState, privateState.secretKey];
   }
 };
 
@@ -56,7 +60,9 @@ export const createTenantPrivateState = (
 };
 
 // Helper function to validate private state
-export const validatePrivateState = (privateState: PrivateRentPrivateState): boolean => {
+export const validatePrivateState = (
+  privateState: PrivateRentPrivateState
+): boolean => {
   return (
     privateState.income >= 0n &&
     privateState.creditScore >= 0n &&

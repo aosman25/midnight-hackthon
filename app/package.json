@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "counter-cli",
+    "privaterent-cli",
     "contract"
   ],
   "devDependencies": {

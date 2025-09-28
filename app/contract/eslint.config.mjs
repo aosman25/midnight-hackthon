@@ -33,6 +33,6 @@ export default [
     }
   },
   {
-    ignores: ["src/managed/**"]
+    ignores: ["src/managed/**", "src/build/**"]
   }
 ];
